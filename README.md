@@ -1,6 +1,65 @@
 Welcome to the Brickhouse
 =========================
 
+Followed link
+http://stackoverflow.com/questions/24607685/loading-xml-data-into-hive-table-org-apache-hadoop-hive-ql-metadata-hiveexcepti
+
+
+
+
+
+
+---------------------------------------------------------------------------
+
+
+ADD jar /home/daas/brickhouse-0.7.0-SNAPSHOT.jar;  --Add brickhouse jar 
+
+CREATE TEMPORARY FUNCTION array_index AS 'brickhouse.udf.collect.ArrayIndexUDF';
+CREATE TEMPORARY FUNCTION numeric_range AS 'brickhouse.udf.collect.NumericRange';
+
+DROP table xmltable;
+
+CREATE EXTERNAL table xmltable  (xmldata string)
+LOCATION '/daastest/hivexml';
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
+LOCATION '/daastest/hivexml';
+
+
+select xpath(xmldata, '/sessionList/session/@appName') from xmltable;
+
+
+drop view MyxmlView;
+
+CREATE VIEW MyxmlView(appName) AS
+SELECT
+xpath(xmldata, '/sessionList/session/@appName')
+ FROM xmltable;
+ 
+ select * from MyxmlView;
+ 
+ 
+ SELECT 
+    array_index( appName, n ) as source
+ from MyxmlView
+lateral view numeric_range( size( appName )) MyxmlView as n;
+
+
+
+
+
+
+
+
+
+
+
+
+-------------------------------------------------------------------------------
+
+
+
+
+
 [![Build Status](https://travis-ci.org/klout/brickhouse.svg?branch=master)](https://travis-ci.org/klout/brickhouse)
 
    Brickhouse is a collection of UDF's for Hive to improve developer 
@@ -49,4 +108,49 @@ Also, see discussions on the Brickhouse Confessions blog on Wordpress
  
 
 [![DOI](https://zenodo.org/badge/4948/klout/brickhouse.png)](http://dx.doi.org/10.5281/zenodo.10751)
+
+
+
+
+
+----------------
+
+
+
+
+--Load xml data to table
+DROP table xmltable;
+Create TABLE xmltable(xmldata string) STORED AS TEXTFILE;
+LOAD DATA lOCAL INPATH '/home/vijay/data-input.xml' OVERWRITE INTO TABLE xmltable;
+
+-- check contents
+SELECT * from xmltable;
+
+-- create view
+Drop view  MyxmlView;
+CREATE VIEW MyxmlView(id, genre, price) AS
+SELECT
+ xpath(xmldata, 'catalog/book/id/text()'),
+ xpath(xmldata, 'catalog/book/genre/text()'),
+ xpath(xmldata, 'catalog/book/price/text()')
+FROM xmltable;
+
+-- check view
+SELECT id, genre,price FROM MyxmlView;
+
+
+ADD jar /home/vijay/brickhouse-0.7.0-SNAPSHOT.jar;  --Add brickhouse jar 
+
+CREATE TEMPORARY FUNCTION array_index AS 'brickhouse.udf.collect.ArrayIndexUDF';
+CREATE TEMPORARY FUNCTION numeric_range AS 'brickhouse.udf.collect.NumericRange';
+
+SELECT 
+   array_index( id, n ) as my_id,
+   array_index( genre, n ) as my_genre,
+   array_index( price, n ) as my_price
+from MyxmlView
+lateral view numeric_range( size( id )) MyxmlView as n;
+
+
+
 
